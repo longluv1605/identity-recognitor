@@ -1,0 +1,40 @@
+## Configuration for the realtime face recognition pipeline.
+
+# Detector configuration: chọn mô hình phát hiện và đường dẫn file trọng số. Ví dụ:.
+# - "yolov8" với file .pt khi cần tốc độ/độ chính xác cao hơn:contentReference[oaicite:0]{index=0}.
+detector:
+  name: yolov8
+  model_path: "models/detection/yolo/yolov8n-face.pt"
+
+# Aligner: dùng MediaPipe FaceMesh để căn chỉnh khuôn mặt trước khi embedding:contentReference[oaicite:1]{index=1}.
+aligner:
+  type: mediapipe
+  output_size: [112, 112]      # kích thước ảnh align (phù hợp ArcFace)
+  detection_confidence: 0.5
+
+# Embedding: chọn phương pháp trích xuất đặc trưng.
+embedding:
+  method: simple
+  output_dim: 1024
+  input_size: 32
+  model_path: ""               # đường dẫn file .onnx khi dùng ArcFace
+  device: cpu
+
+# Matcher: cấu hình cách so khớp embedding với database.
+matcher:
+  type: simple
+  threshold: 0.5               # ngưỡng cosine similarity để coi là trùng khớp
+
+# Tracker: chỉ định thuật toán theo dõi và các tham số ByteTrack nếu dùng:contentReference[oaicite:2]{index=2}.
+tracker:
+  type: deepsort
+  max_age: 5            # số frame tối đa bỏ lỡ trước khi xoá track
+  n_init: 3             # số lần phát hiện liên tiếp để xác nhận track
+  max_iou_distance: 0.7 # ngưỡng IOU để ghép detection với track
+  embedder_gpu: false   # chạy embedder trên GPU (nếu có, cần torch/torchvision)
+  half: false           # dùng FP16 cho embedder để giảm bộ nhớ
+  bgr: true  
+
+# Camera: ID của webcam cần sử dụng.
+camera:
+  device_id: 0

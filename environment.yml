@@ -1,0 +1,20 @@
+name: realtime-face-recognition
+channels:
+  - nvidia
+  - pytorch
+  - anaconda
+  - defaults
+dependencies:
+  - python=3.8
+  - pytorch
+  - torchvision=0.19
+  - torchaudio
+  - pytorch-cuda
+  - cudatoolkit
+  - pip
+  - pip:
+      - deep-sort-realtime
+      - opencv-python
+      - ultralytics
+      - mediapipe
+      - tqdm

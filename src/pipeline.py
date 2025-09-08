@@ -13,6 +13,7 @@ from src.detectors.yolo_detector import YoloDetector
 from src.aligners.mediapipe_aligner import MediaPipeAligner
 from src.embedders.simple_embedder import SimpleEmbedder
 from src.embedders.arcface_embedder import ArcFaceEmbedder
+from src.embedders.deepface_embedder import DeepFaceEmbedder
 from src.matchers.simple_matcher import SimpleMatcher
 from src.trackers.deepsort_tracker import DeepSortTracker
 from src.database import EmbeddingDatabase
@@ -62,6 +63,11 @@ class FaceRecognitionPipeline:
             self.embedder = ArcFaceEmbedder(
                 model_path=emb_cfg.get("model_path"), device=emb_cfg.get("device", "cpu")                     
             )
+        elif emb_method == "deepface":
+            self.embedder = DeepFaceEmbedder(
+                model_name=emb_cfg.get("model_name"),
+                enforce_detection=emb_cfg.get("enforce_detection", False)
+            )
         else:
             raise ValueError(f"Unsupported embedding method: {emb_method}")
 
@@ -72,9 +78,12 @@ class FaceRecognitionPipeline:
         match_cfg = cfg.get("matcher", {})
         matcher_type = match_cfg.get("type", "simple")
         threshold = match_cfg.get("threshold", 0.5)
+        use_cosine = match_cfg.get("use_cosine", True)  # mặc định dùng cosine
         if matcher_type == "simple":
             self.matcher = SimpleMatcher(
-                embeddings=self.db.get_all() if self.db else {}, threshold=threshold
+                embeddings=self.db.get_all() if self.db else {}, 
+                threshold=threshold,
+                use_cosine=use_cosine
             )
         else:
             raise ValueError(f"Unsupported matcher: {matcher_type}")
@@ -116,16 +125,17 @@ class FaceRecognitionPipeline:
             # Deepsort đã gán id; ta tạm giữ để xử lý từng track
             results = []
             for x, y, w, h, tid in tracks:
-                face_aligned = self.aligner(frame, (x, y, w, h))
+                face_aligned = self.aligner.align(frame, (x, y, w, h))
                 embedding = self.embedder.embed(face_aligned)
                 label, score = self.matcher.match(embedding)
+                print('ok')
                 results.append((x, y, w, h, label, score, tid))
             return results
         else:
             # 3. Nếu tracker đơn giản: xử lý detection rồi gán id sau
             results = []
             for (x, y, w, h, score) in detections_with_score:
-                face_aligned = self.aligner(frame, (x, y, w, h))
+                face_aligned = self.aligner.align(frame, (x, y, w, h))
                 embedding = self.embedder.embed(face_aligned)
                 label, sim = self.matcher.match(embedding)
                 results.append((x, y, w, h, label, sim, -1))

@@ -15,6 +15,7 @@ os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 
 import argparse
 import cv2
+import time
 
 from src.pipeline import FaceRecognitionPipeline
 
@@ -58,6 +59,10 @@ def main():
     if not cap.isOpened():
         raise RuntimeError(f"Không thể mở webcam {camera_id}")
 
+    # Khởi tạo biến để tính FPS
+    prev_time = time.time()
+    fps_display = 0.0
+
     print("Nhấn 'q' để thoát.")
     while True:
         ret, frame = cap.read()
@@ -67,6 +72,7 @@ def main():
 
         results = pipeline.process_frame(frame)
         print(results)
+        
         # Vẽ bounding box và nhãn
         for x, y, w, h, label, score, track_id in results:
             # rectangle
@@ -83,6 +89,26 @@ def main():
                 (0, 255, 0),
                 1,
             )
+        
+        # Tính toán FPS chính xác cho từng frame
+        current_time = time.time()
+        time_diff = current_time - prev_time
+        if time_diff > 0:
+            fps_display = 1.0 / time_diff
+        prev_time = current_time
+        
+        # Hiển thị FPS lên góc trái màn hình
+        fps_text = f"FPS: {fps_display:.1f}"
+        cv2.putText(
+            frame,
+            fps_text,
+            (10, 30),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.7,
+            (255, 255, 0),  # Màu cyan
+            2
+        )
+        
         cv2.imshow("Face Recognition", frame)
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break

@@ -3,38 +3,41 @@
 # Detector configuration: chọn mô hình phát hiện và đường dẫn file trọng số. Ví dụ:.
 # - "yolov8" với file .pt khi cần tốc độ/độ chính xác cao hơn:contentReference[oaicite:0]{index=0}.
 detector:
-  name: yolov8
-  model_path: "models/detection/yolo/yolov8n-face.pt"
+    name: yolov8
+    model_path: "models/detection/yolo/yolov8n-face.pt"
 
 # Aligner: dùng MediaPipe FaceMesh để căn chỉnh khuôn mặt trước khi embedding:contentReference[oaicite:1]{index=1}.
 aligner:
-  type: mediapipe
-  output_size: [112, 112]      # kích thước ảnh align (phù hợp ArcFace)
-  detection_confidence: 0.5
+    type: mediapipe
+    output_size: [112, 112] # kích thước ảnh align (phù hợp ArcFace)
+    detection_confidence: 0.3 # Giảm từ 0.7 xuống 0.3 để dễ detect landmarks hơn
 
 # Embedding: chọn phương pháp trích xuất đặc trưng.
 embedding:
-  method: arcface             # simple, arcface
-  output_dim: 1024
-  input_size: 32
-  model_path: "models/embedding/arcface/arcfaceresnet100-11-int8.onnx"               # đường dẫn file .onnx khi dùng ArcFace
-  device: cpu
+    method: deepface # simple, arcface, deepface
+    output_dim: 512  # 512 cho Facenet512/ArcFace, 128 cho Facenet/OpenFace
+    input_size: 32
+    model_path: "models/embedding/arcface/arcfaceresnet100-11-int8.onnx" # đường dẫn file .onnx khi dùng ArcFace
+    model_name: "Facenet512"  # Hoặc "ArcFace", "VGG-Face", "OpenFace" 
+    enforce_detection: false
+    device: cpu
 
 # Matcher: cấu hình cách so khớp embedding với database.
 matcher:
-  type: simple
-  threshold: 0.5               # ngưỡng cosine similarity để coi là trùng khớp
+    type: simple
+    threshold: 0.6 # Threshold cho cosine similarity với SimpleEmbedder
+    use_cosine: true # Cosine similarity cho SimpleEmbedder
 
 # Tracker: chỉ định thuật toán theo dõi và các tham số ByteTrack nếu dùng:contentReference[oaicite:2]{index=2}.
 tracker:
-  type: deepsort
-  max_age: 20           # số frame tối đa bỏ lỡ trước khi xoá track
-  n_init: 3             # số lần phát hiện liên tiếp để xác nhận track
-  max_iou_distance: 0.7 # ngưỡng IOU để ghép detection với track
-  embedder_gpu: false   # chạy embedder trên GPU (nếu có, cần torch/torchvision)
-  half: false           # dùng FP16 cho embedder để giảm bộ nhớ
-  bgr: true  
+    type: deepsort
+    max_age: 5 # số frame tối đa bỏ lỡ trước khi xoá track
+    n_init: 3 # số lần phát hiện liên tiếp để xác nhận track
+    max_iou_distance: 0.7 # ngưỡng IOU để ghép detection với track
+    embedder_gpu: false # chạy embedder trên GPU (nếu có, cần torch/torchvision)
+    half: false # dùng FP16 cho embedder để giảm bộ nhớ
+    bgr: true
 
 # Camera: ID của webcam cần sử dụng.
 camera:
-  device_id: 0
+    device_id: 0

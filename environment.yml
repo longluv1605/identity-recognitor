@@ -19,3 +19,4 @@ dependencies:
       - mediapipe
       - tqdm
       - onnxruntime
+      - deepface

@@ -24,18 +24,18 @@ os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 import argparse
 import cv2
 import numpy as np
-from tqdm import tqdm
+# from tqdm import tqdm
 
 from src.detectors.yolo_detector import YoloDetector
 from src.aligners.mediapipe_aligner import MediaPipeAligner
-from src.embedders.arcface_embedder import ArcFaceEmbedder
+from src.embedders.deepface_embedder import DeepFaceEmbedder
 from src.database import save_database
 
 
 def build_database(input_dir: str, output_path: str, detect_model: str, embed_model: str) -> None:
     detector = YoloDetector(model=detect_model)
-    aligner = MediaPipeAligner(output_size=(112, 112), detection_confidence=0.5)
-    embedder = ArcFaceEmbedder(model_path=embed_model)
+    aligner = MediaPipeAligner(output_size=(112, 112), detection_confidence=0.7)
+    embedder = DeepFaceEmbedder(model_name='Facenet512')
 
     db = {}
     people = [d for d in os.listdir(input_dir) if os.path.isdir(os.path.join(input_dir, d))]
@@ -52,18 +52,20 @@ def build_database(input_dir: str, output_path: str, detect_model: str, embed_mo
             bboxes = detector.detect(img)
             for (x, y, w, h) in bboxes:
                 # align and embed
-                face = aligner(img, (x, y, w, h))
+                face = aligner.align(img, (x, y, w, h))
                 vec = embedder.embed(face)
                 embeddings.append(vec)
         if embeddings:
-            db[person] = np.mean(embeddings, axis=0)
+            # Lưu tất cả embeddings thay vì chỉ mean
+            # Format: list of embeddings cho mỗi người
+            db[person] = np.array(embeddings)
     save_database(db, output_path)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create face embedding database")
-    parser.add_argument("--input", required=True, help="Path to labelled face image directory")
-    parser.add_argument("--output", required=True, help="Path to output pickle file")
+    parser.add_argument("--input", default='data/raw', help="Path to labelled face image directory")
+    parser.add_argument("--output", default='data/embeddings/db.pkl', help="Path to output pickle file")
     parser.add_argument(
         "--detect_model", default="models/detection/yolo/yolov8n-face.pt", help="YOLOv8 face detection model (.pt file)"
     )

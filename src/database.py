@@ -11,6 +11,10 @@ from typing import Dict
 import numpy as np
 
 
+def save_database(embeddings: Dict[str, np.ndarray], path: str) -> None:
+    with open(path, "wb") as f:
+        pickle.dump(embeddings, f)
+
 class EmbeddingDatabase:
     def __init__(self, path: str):
         """

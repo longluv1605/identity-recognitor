@@ -7,11 +7,11 @@ from .base import BaseDetector
 class YoloDetector(BaseDetector):
     """YOLO detector using ultralytics."""
 
-    def __init__(self, model: str = "yolov8n-face.pt", device: str = "cpu"):
+    def __init__(self, model: str = "yolov8n.pt", device: str = "cpu"):
         """
         Args:
             model: Đường dẫn tới file .pt của mô hình YOLOv8 được huấn luyện cho
-                   phát hiện khuôn mặt (hoặc tên model có sẵn như 'yolov8n-face.pt').
+                   phát hiện khuôn mặt (hoặc tên model có sẵn như 'yolov8n.pt').
             device: Thiết bị chạy mô hình ('cpu' hoặc 'cuda').
         """
         super().__init__()

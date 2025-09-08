@@ -11,9 +11,7 @@ os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 import argparse
 import cv2
 
-# print('Import pipeline')
 from .pipeline import FaceRecognitionPipeline
-# print('Imported pipeline')
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Realtime Face Recognition Demo")
@@ -26,7 +24,7 @@ def parse_args():
     parser.add_argument(
         "--db",
         type=str,
-        default=None,
+        default=os.path.join(os.path.dirname(__file__), "..", "data", "embeddings", "db.pkl"),
         help="Đường dẫn database embeddings (pickle). Nếu không có, hệ thống sẽ luôn trả 'unknown'",
     )
     parser.add_argument(
@@ -38,9 +36,7 @@ def parse_args():
     return parser.parse_args()
 
 def main():
-    # print("Parsing args")
     args = parse_args()
-    # print("Parsed args")
     
     print(args)
     pipeline = FaceRecognitionPipeline(config_path=args.config, db_path=args.db)

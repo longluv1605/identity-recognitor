@@ -28,7 +28,7 @@ matcher:
 # Tracker: chỉ định thuật toán theo dõi và các tham số ByteTrack nếu dùng:contentReference[oaicite:2]{index=2}.
 tracker:
   type: deepsort
-  max_age: 5            # số frame tối đa bỏ lỡ trước khi xoá track
+  max_age: 20           # số frame tối đa bỏ lỡ trước khi xoá track
   n_init: 3             # số lần phát hiện liên tiếp để xác nhận track
   max_iou_distance: 0.7 # ngưỡng IOU để ghép detection với track
   embedder_gpu: false   # chạy embedder trên GPU (nếu có, cần torch/torchvision)

@@ -9,7 +9,7 @@ from typing import List, Tuple
 import yaml
 import numpy as np
 
-from .detectors.yolov8_detector import YoloDetector
+from .detectors.yolo_detector import YoloDetector
 from .aligners.mediapipe_aligner import MediaPipeAligner
 from .embedders.simple_embedder import SimpleEmbedder
 from .matchers.simple_matcher import SimpleMatcher

@@ -9,12 +9,13 @@ from typing import List, Tuple
 import yaml
 import numpy as np
 
-from .detectors.yolo_detector import YoloDetector
-from .aligners.mediapipe_aligner import MediaPipeAligner
-from .embedders.simple_embedder import SimpleEmbedder
-from .matchers.simple_matcher import SimpleMatcher
-from .trackers.deepsort_tracker import DeepSortTracker
-from .database import EmbeddingDatabase
+from src.detectors.yolo_detector import YoloDetector
+from src.aligners.mediapipe_aligner import MediaPipeAligner
+from src.embedders.simple_embedder import SimpleEmbedder
+from src.embedders.arcface_embedder import ArcFaceEmbedder
+from src.matchers.simple_matcher import SimpleMatcher
+from src.trackers.deepsort_tracker import DeepSortTracker
+from src.database import EmbeddingDatabase
 
 class FaceRecognitionPipeline:
     def __init__(self, config_path: str, db_path: str = None):
@@ -56,6 +57,10 @@ class FaceRecognitionPipeline:
         if emb_method == "simple":
             self.embedder = SimpleEmbedder(
                 output_dim=emb_cfg.get("output_dim"), size=emb_cfg.get("input_size", 32)
+            )
+        elif emb_method == "arcface":
+            self.embedder = ArcFaceEmbedder(
+                model_path=emb_cfg.get("model_path"), device=emb_cfg.get("device", "cpu")                     
             )
         else:
             raise ValueError(f"Unsupported embedding method: {emb_method}")

@@ -14,10 +14,10 @@ aligner:
 
 # Embedding: chọn phương pháp trích xuất đặc trưng.
 embedding:
-  method: simple
+  method: arcface             # simple, arcface
   output_dim: 1024
   input_size: 32
-  model_path: ""               # đường dẫn file .onnx khi dùng ArcFace
+  model_path: "models/embedding/arcface/arcfaceresnet100-11-int8.onnx"               # đường dẫn file .onnx khi dùng ArcFace
   device: cpu
 
 # Matcher: cấu hình cách so khớp embedding với database.

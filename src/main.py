@@ -6,12 +6,17 @@ rồi đọc khung hình từ webcam, xử lý và hiển thị kết quả.
 """
 
 import os
+import sys
+
+##############
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+##############
 
 import argparse
 import cv2
 
-from .pipeline import FaceRecognitionPipeline
+from src.pipeline import FaceRecognitionPipeline
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Realtime Face Recognition Demo")
@@ -86,4 +91,5 @@ def main():
     cv2.destroyAllWindows()
     
 #########################################
-main()
+if __name__ == '__main__':
+    main()

@@ -7,7 +7,7 @@ channels:
 dependencies:
   - python=3.8
   - pytorch
-  - torchvision=0.19
+  - torchvision
   - torchaudio
   - pytorch-cuda
   - cudatoolkit
@@ -18,3 +18,4 @@ dependencies:
       - ultralytics
       - mediapipe
       - tqdm
+      - onnxruntime

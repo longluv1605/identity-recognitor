@@ -11,15 +11,17 @@ import numpy as np
 
 from src.detectors.yolo_detector import YoloDetector
 from src.aligners.mediapipe_aligner import MediaPipeAligner
+from src.aligners.simple_aligner import SimpleAligner
 from src.embedders.simple_embedder import SimpleEmbedder
 from src.embedders.arcface_embedder import ArcFaceEmbedder
 from src.embedders.deepface_embedder import DeepFaceEmbedder
 from src.matchers.simple_matcher import SimpleMatcher
 from src.trackers.deepsort_tracker import DeepSortTracker
+from src.trackers.bytetrack_tracker import ByteTrackTracker
 from src.database import EmbeddingDatabase
 
 class FaceRecognitionPipeline:
-    def __init__(self, config_path: str, db_path: str = None):
+    def __init__(self, config_path: str):
         """
         Khởi tạo các module theo cấu hình.
 
@@ -49,6 +51,10 @@ class FaceRecognitionPipeline:
                 output_size=tuple(align_cfg.get("output_size", [112, 112])),
                 detection_confidence=align_cfg.get("detection_confidence", 0.5),
             )
+        elif align_type == "simple":
+            self.aligner = SimpleAligner(
+                output_size=tuple(align_cfg.get("output_size", [112, 112]))
+            )
         else:
             raise ValueError(f"Unsupported aligner: {align_type}")
 
@@ -72,7 +78,8 @@ class FaceRecognitionPipeline:
             raise ValueError(f"Unsupported embedding method: {emb_method}")
 
         # Tải database
-        self.db = EmbeddingDatabase(db_path) if db_path else None
+        db_cfg = cfg.get("database", {})
+        self.db = EmbeddingDatabase(db_cfg.get("output")) if db_cfg.get("output") else None
 
         # Chọn matcher
         match_cfg = cfg.get("matcher", {})
@@ -100,6 +107,14 @@ class FaceRecognitionPipeline:
                 half=track_cfg.get("half", False),
                 bgr=track_cfg.get("bgr", True),
             )
+        elif tracker_type == "bytetrack":
+            self.tracker = ByteTrackTracker(
+                frame_rate=track_cfg.get("frame_rate", 30),
+                track_thresh=track_cfg.get("track_thresh", 0.5),
+                match_thresh=track_cfg.get("match_thresh", 0.8),
+                min_box_area=track_cfg.get("min_box_area", 10),
+                use_cuda=track_cfg.get("use_cuda", False),
+            )
         else:
             raise ValueError(f"Unsupported tracker: {tracker_type}")
 
@@ -110,41 +125,32 @@ class FaceRecognitionPipeline:
         Returns:
             Danh sách tuple (x, y, w, h, label, score, track_id).
         """
-        # 1. Phát hiện khuôn mặt
-        bboxes = self.detector.detect(frame)
-        detections_with_score = []
+        # detect → chuẩn hoá (x, y, w, h, score)
+        bboxes = self.detector.detect(frame) or []
+        detections = [(*b[:4], (b[4] if len(b) >= 5 else 1.0)) for b in bboxes]
 
-        # Nếu detector của bạn không trả điểm confidence, đặt mặc định
-        for bbox in bboxes:
-            # bbox = (x, y, w, h)
-            detections_with_score.append((*bbox, 1.0))
+        def recognize(x: int, y: int, w: int, h: int) -> Tuple[str, float]:
+            face = self.aligner.align(frame, (x, y, w, h))
+            emb = self.embedder.embed(face)
+            return self.matcher.match(emb)
 
-        # 2. Tracking: cần track trước khi nhận dạng nếu dùng Track
+        # track nếu có tracker “thực”
+        tracks = None
         if isinstance(self.tracker, DeepSortTracker):
-            tracks = self.tracker.update(detections_with_score, frame)
-            # Deepsort đã gán id; ta tạm giữ để xử lý từng track
-            results = []
-            for x, y, w, h, tid in tracks:
-                face_aligned = self.aligner.align(frame, (x, y, w, h))
-                embedding = self.embedder.embed(face_aligned)
-                label, score = self.matcher.match(embedding)
-                print('ok')
-                results.append((x, y, w, h, label, score, tid))
-            return results
-        else:
-            # 3. Nếu tracker đơn giản: xử lý detection rồi gán id sau
-            results = []
-            for (x, y, w, h, score) in detections_with_score:
-                face_aligned = self.aligner.align(frame, (x, y, w, h))
-                embedding = self.embedder.embed(face_aligned)
-                label, sim = self.matcher.match(embedding)
-                results.append((x, y, w, h, label, sim, -1))
-            # Gán ID tăng dần
-            if self.tracker:
-                tracked = self.tracker.assign_ids([(x, y, w, h) for (x, y, w, h, _, _, _) in results])
-                # Kết hợp id vào kết quả
-                final_results = []
-                for ((x, y, w, h, label, sim, _), (_, _, _, _, tid)) in zip(results, tracked):
-                    final_results.append((x, y, w, h, label, sim, tid))
-                return final_results
-            return results
+            tracks = self.tracker.update(detections, frame)
+        elif isinstance(self.tracker, ByteTrackTracker):
+            tracks = self.tracker.update(detections, frame.shape[:2])
+
+        if tracks:
+            return [(x, y, w, h, *recognize(x, y, w, h), tid) for x, y, w, h, tid in tracks]
+
+        # không có tracker/hoặc tracker đơn giản → nhận dạng trước
+        results = [(x, y, w, h, *recognize(x, y, w, h), -1) for (x, y, w, h, _) in detections]
+
+        # gán ID nếu có assign_ids
+        if getattr(self.tracker, "assign_ids", None):
+            ids = self.tracker.assign_ids([(x, y, w, h) for (x, y, w, h, _, _, _) in results])
+            return [(x, y, w, h, label, score, tid)
+                    for (x, y, w, h, label, score, _), (_, _, _, _, tid) in zip(results, ids)]
+
+        return results

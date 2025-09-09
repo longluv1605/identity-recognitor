@@ -28,12 +28,6 @@ def parse_args():
         help="Đường dẫn file cấu hình YAML",
     )
     parser.add_argument(
-        "--db",
-        type=str,
-        default=os.path.join(os.path.dirname(__file__), "..", "data", "embeddings", "db.pkl"),
-        help="Đường dẫn database embeddings (pickle). Nếu không có, hệ thống sẽ luôn trả 'unknown'",
-    )
-    parser.add_argument(
         "--camera",
         type=int,
         default=0,
@@ -45,7 +39,7 @@ def main():
     args = parse_args()
     
     print(args)
-    pipeline = FaceRecognitionPipeline(config_path=args.config, db_path=args.db)
+    pipeline = FaceRecognitionPipeline(config_path=args.config)
 
     # Lấy camera ID từ arg hoặc config
     camera_id = args.camera

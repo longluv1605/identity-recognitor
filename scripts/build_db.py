@@ -24,6 +24,7 @@ os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 import argparse
 import cv2
 import numpy as np
+import yaml
 # from tqdm import tqdm
 
 from src.detectors.yolo_detector import YoloDetector
@@ -32,16 +33,32 @@ from src.embedders.deepface_embedder import DeepFaceEmbedder
 from src.database import save_database
 
 
-def build_database(input_dir: str, output_path: str, detect_model: str, embed_model: str) -> None:
-    detector = YoloDetector(model=detect_model)
-    aligner = MediaPipeAligner(output_size=(112, 112), detection_confidence=0.7)
-    embedder = DeepFaceEmbedder(model_name='Facenet512')
+def build_database(config_path: str) -> None:
+    try:
+        with open(config_path, "r", encoding='utf-8') as f:
+            cfg = yaml.safe_load(f)
+    except Exception as e:
+        raise e
+    
+    det_cfg = cfg.get('detector', {})
+    align_cfg = cfg.get('aligner', {})
+    emb_cfg = cfg.get('embedding', {})
+    db_cfg = cfg.get('database', {})
+    
+    if det_cfg['name'] == 'yolov8':    
+        detector = YoloDetector(model=cfg['detector']['model_path'])
+        
+    if align_cfg['type'] == 'mediapipe':
+        aligner = MediaPipeAligner(output_size=align_cfg['output_size'])
+        
+    if emb_cfg['method'] == 'deepface':
+        embedder = DeepFaceEmbedder(model_name=emb_cfg['model_name'])
 
     db = {}
-    people = [d for d in os.listdir(input_dir) if os.path.isdir(os.path.join(input_dir, d))]
+    people = [d for d in os.listdir(db_cfg['input']) if os.path.isdir(os.path.join(db_cfg['input'], d))]
     # people = tqdm(people, desc='Building database: ')
     for person in people:
-        person_dir = os.path.join(input_dir, person)
+        person_dir = os.path.join(db_cfg['input'], person)
         embeddings = []
         for img_name in os.listdir(person_dir):
             img_path = os.path.join(person_dir, img_name)
@@ -59,19 +76,12 @@ def build_database(input_dir: str, output_path: str, detect_model: str, embed_mo
             # Lưu tất cả embeddings thay vì chỉ mean
             # Format: list of embeddings cho mỗi người
             db[person] = np.array(embeddings)
-    save_database(db, output_path)
+    save_database(db, db_cfg['output'])
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create face embedding database")
-    parser.add_argument("--input", default='data/raw', help="Path to labelled face image directory")
-    parser.add_argument("--output", default='data/embeddings/db.pkl', help="Path to output pickle file")
-    parser.add_argument(
-        "--detect_model", default="models/detection/yolo/yolov8n-face.pt", help="YOLOv8 face detection model (.pt file)"
-    )
-    parser.add_argument(
-        "--embed_model", default="models/embedding/arcface/arcfaceresnet100-11-int8.onnx", help="YOLOv8 face detection model (.pt file)"
-    )
+    parser.add_argument("--config", default='config/config.yaml', help="Path to config file")
     args = parser.parse_args()
-    build_database(args.input, args.output, args.detect_model, args.embed_model)
+    build_database(args.config)
     print('=> Database built successfully...')

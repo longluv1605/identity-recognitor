@@ -27,9 +27,9 @@ import numpy as np
 import yaml
 # from tqdm import tqdm
 
-from src.detectors.yolo_detector import YoloDetector
-from src.aligners.mediapipe_aligner import MediaPipeAligner
-from src.embedders.deepface_embedder import DeepFaceEmbedder
+from src.detectors import YoloDetector
+from src.aligners import SimpleAligner, MediaPipeAligner
+from src.embedders import ArcFaceEmbedder, DeepFaceEmbedder
 from src.database import save_database
 
 
@@ -47,12 +47,18 @@ def build_database(config_path: str) -> None:
     
     if det_cfg['name'] == 'yolov8':    
         detector = YoloDetector(model=cfg['detector']['model_path'])
+    else:
+        raise ValueError("Unsupported detector...")
         
     if align_cfg['type'] == 'mediapipe':
         aligner = MediaPipeAligner(output_size=align_cfg['output_size'])
+    else:
+        raise ValueError("Unsupported aligner...")
         
     if emb_cfg['method'] == 'deepface':
         embedder = DeepFaceEmbedder(model_name=emb_cfg['model_name'])
+    else:
+        raise ValueError("Unsupported embedder...")
 
     db = {}
     people = [d for d in os.listdir(db_cfg['input']) if os.path.isdir(os.path.join(db_cfg['input'], d))]

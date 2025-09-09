@@ -15,10 +15,10 @@ try:
 except ImportError:
     ort = None
 
-from .simple_embedder import SimpleEmbedder
+from .base import BaseEmbedder
 
 
-class ArcFaceEmbedder(SimpleEmbedder):
+class ArcFaceEmbedder(BaseEmbedder):
     """
     Embedder sử dụng mô hình ArcFace. Kế thừa SimpleEmbedder để giữ tham số
     size và output_dim, nhưng override phương thức embed().

@@ -138,12 +138,10 @@ FPS: Hiển thị ở góc trái trên
 
 - **DeepFace**: Facenet512, ArcFace, VGG-Face, OpenFace, DeepID, Dlib, SFace
 - **ArcFace**: ONNX models cho performance cao
-- **Simple**: CNN đơn giản cho test
 
 ### Face Alignment
 
 - **MediaPipe**: Sử dụng landmarks cho alignment chính xác
-- **SimpleResize**: Chỉ crop và resize, ổn định hơn
 
 ### Face Tracking
 

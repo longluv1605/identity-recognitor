@@ -158,7 +158,7 @@ FPS: Hiển thị ở góc trái trên
 4. Push to branch (`git push origin feature/AmazingFeature`)
 5. Mở Pull Request
 
-## 📄 License
+## License
 
 GNU License. Xem `LICENSE` để biết thêm thông tin.
 
@@ -168,7 +168,7 @@ GNU License. Xem `LICENSE` để biết thêm thông tin.
 - **GitHub**: [longluv1605](https://github.com/longluv1605)
 - **Project Link**: [https://github.com/longluv1605/identity-recognitor](https://github.com/longluv1605/identity-recognitor)
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [YOLOv8](https://github.com/ultralytics/ultralytics) - Face detection model
 - [DeepFace](https://github.com/serengil/deepface) - Face recognition framework

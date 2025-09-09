@@ -28,7 +28,7 @@ import yaml
 # from tqdm import tqdm
 
 from src.detectors import YoloDetector
-from src.aligners import SimpleAligner, MediaPipeAligner
+from src.aligners import SimpleAligner
 from src.embedders import ArcFaceEmbedder, DeepFaceEmbedder
 from src.database import save_database
 
@@ -50,8 +50,9 @@ def build_database(config_path: str) -> None:
     else:
         raise ValueError("Unsupported detector...")
         
-    if align_cfg['type'] == 'mediapipe':
-        aligner = MediaPipeAligner(output_size=align_cfg['output_size'])
+    if align_cfg['type'] == 'simple':
+        # aligner = MediaPipeAligner(output_size=align_cfg['output_size'])
+        aligner = SimpleAligner(output_size=align_cfg['output_size'])
     else:
         raise ValueError("Unsupported aligner...")
         

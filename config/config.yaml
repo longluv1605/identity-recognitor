@@ -12,7 +12,7 @@ detector:
 
 # Aligner: dùng SimpleResize để chỉ resize và chuẩn hóa ảnh
 aligner:
-    type: mediapipe
+    type: simple
     output_size: [112, 112] # kích thước ảnh align
 
 # Embedding: chọn phương pháp trích xuất đặc trưng.

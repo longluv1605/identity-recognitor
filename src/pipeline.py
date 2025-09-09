@@ -10,7 +10,7 @@ import yaml
 import numpy as np
 
 from src.detectors import YoloDetector
-from src.aligners import MediaPipeAligner, SimpleAligner
+from src.aligners import SimpleAligner
 from src.embedders import SimpleEmbedder, ArcFaceEmbedder, DeepFaceEmbedder
 from src.matchers import SimpleMatcher
 from src.trackers import DeepSortTracker, ByteTrackTracker
@@ -105,10 +105,11 @@ class FaceRecognitionPipeline:
     def _create_aligner(self, align_cfg):
         align_type = align_cfg.get("type", "mediapipe")
         if align_type == "mediapipe":
-            self.aligner = MediaPipeAligner(
-                output_size=tuple(align_cfg.get("output_size", [112, 112])),
-                detection_confidence=align_cfg.get("detection_confidence", 0.5),
-            )
+            # self.aligner = MediaPipeAligner(
+            #     output_size=tuple(align_cfg.get("output_size", [112, 112])),
+            #     detection_confidence=align_cfg.get("detection_confidence", 0.5),
+            # )
+            pass
         elif align_type == "simple":
             self.aligner = SimpleAligner(
                 output_size=tuple(align_cfg.get("output_size", [112, 112]))

@@ -24,10 +24,10 @@ class DeepSortTracker(BaseTracker):
         )
 
     def update(self,
-               detections: List[Tuple[int, int, int, int, float]],
+               detections: List[Tuple[int, int, int, int, float, int]],
                frame: np.ndarray) -> List[Tuple[int, int, int, int, int]]:
         # Chuyển detections về ([x, y, w, h], score, class_id)
-        bbs = [([x, y, w, h], float(score), 0) for (x, y, w, h, score) in detections]
+        bbs = [([x, y, w, h], float(score), cls) for (x, y, w, h, score, cls) in detections]
         tracks = self._tracker.update_tracks(bbs, frame=frame)
         results: List[Tuple[int, int, int, int, int]] = []
         for track in tracks:

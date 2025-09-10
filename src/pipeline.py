@@ -63,8 +63,7 @@ class FaceRecognitionPipeline:
             Danh sách tuple (x, y, w, h, label, score, track_id).
         """
         # detect → chuẩn hoá (x, y, w, h, score)
-        bboxes = self.detector.detect(frame) or []
-        detections = [(*b[:4], (b[4] if len(b) >= 5 else 1.0)) for b in bboxes]
+        detections = self.detector.detect(frame) or []
 
         def recognize(x: int, y: int, w: int, h: int) -> Tuple[str, float]:
             face = self.aligner.align(frame, (x, y, w, h))
@@ -76,7 +75,7 @@ class FaceRecognitionPipeline:
         if isinstance(self.tracker, DeepSortTracker):
             tracks = self.tracker.update(detections, frame)
         elif isinstance(self.tracker, ByteTrackTracker):
-            tracks = self.tracker.update(detections, frame.shape[:2])
+            tracks = self.tracker.update(detections)
 
         if tracks:
             return [(x, y, w, h, *recognize(x, y, w, h), tid) for x, y, w, h, tid in tracks]

@@ -66,19 +66,26 @@ def build_database(config_path: str) -> None:
     # people = tqdm(people, desc='Building database: ')
     for person in people:
         person_dir = os.path.join(db_cfg['input'], person)
+        save_dir = os.path.join(db_cfg['processed'], person)
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir, exist_ok=True)
+        
         embeddings = []
         for img_name in os.listdir(person_dir):
             img_path = os.path.join(person_dir, img_name)
+            save_path = os.path.join(save_dir, img_name)
+            
             img = cv2.imread(img_path)
             if img is None:
                 continue
             # detect faces
             bboxes = detector.detect(img)
-            for (x, y, w, h) in bboxes:
+            for (x, y, w, h, _, _) in bboxes:
                 # align and embed
                 face = aligner.align(img, (x, y, w, h))
                 vec = embedder.embed(face)
                 embeddings.append(vec)
+                cv2.imwrite(save_path, face)
         if embeddings:
             # Lưu tất cả embeddings thay vì chỉ mean
             # Format: list of embeddings cho mỗi người

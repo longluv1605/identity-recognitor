@@ -21,12 +21,12 @@ class YoloDetector(BaseDetector):
         # Đảm bảo mô hình chạy trên thiết bị mong muốn
         self.model.to(device)
 
-    def detect(self, frame: np.ndarray) -> List[Tuple[int, int, int, int]]:
+    def detect(self, frame: np.ndarray) -> List[Tuple[int, int, int, int, float, int]]:
         """
-        Nhận một khung hình BGR và trả về danh sách các bounding box (x, y, w, h).
+        Nhận một khung hình BGR và trả về danh sách các bounding box (x, y, w, h, conf, cls).
 
-        Ultralytics YOLO trả về tọa độ (x1, y1, x2, y2); chúng ta chuyển đổi
-        sang (x, y, w, h) để tương thích với pipeline.
+        Ultralytics YOLO trả về tọa độ (x1, y1, x2, y2, conf, cls); chúng ta chuyển đổi
+        sang (x, y, w, h, conf, cls) để tương thích với pipeline.
         """
         # YOLO mong đầu vào là RGB
         img = frame[:, :, ::-1]
@@ -37,9 +37,11 @@ class YoloDetector(BaseDetector):
             result = results[0]
             if hasattr(result, "boxes") and len(result.boxes) > 0:
                 # Lấy tọa độ bounding box ở dạng xyxy (tensor trên GPU)
-                xyxy = result.boxes.xyxy.cpu().numpy()
-                for (x1, y1, x2, y2) in xyxy:
+                data = result.boxes.data.cpu().numpy()
+                for (x1, y1, x2, y2, conf, cls) in data:
                     x, y = int(x1), int(y1)
                     w, h = int(x2 - x1), int(y2 - y1)
-                    boxes.append((x, y, w, h))
+                    conf = float(conf)
+                    cls = int(cls)
+                    boxes.append((x, y, w, h, conf, cls))
         return boxes

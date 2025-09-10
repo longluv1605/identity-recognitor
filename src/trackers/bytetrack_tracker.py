@@ -66,12 +66,10 @@ class ByteTrackTracker(BaseTracker):
         self.frame_rate = int(frame_rate)
 
     def update(self,
-               detections: List[Tuple[int, int, int, int, float]],
-               frame_shape: Tuple[int, int]) -> List[Tuple[int, int, int, int, int]]:
-        """
-        Update tracker và trả về danh sách (x, y, w, h, id).
-        Input detections: (x, y, w, h, score) theo tọa độ góc trên-trái + kích thước.
-        """
+        detections: List[Tuple[int, int, int, int, float, int]]
+    ) -> List[Tuple[int, int, int, int, int]]:
+        # Update tracker và trả về danh sách (x, y, w, h, id).
+        # Input detections: (x, y, w, h, score, cls) theo tọa độ góc trên-trái + kích thước.
 
         if len(detections) == 0:
             det_view = _BoxesLite(np.zeros((0, 4), np.float32),
@@ -81,12 +79,12 @@ class ByteTrackTracker(BaseTracker):
             xyxy = []
             conf = []
             cls  = []
-            for (x, y, w, h, score) in detections:
+            for (x, y, w, h, score, cl) in detections:
                 x1, y1 = x, y
                 x2, y2 = x + w, y + h
                 xyxy.append([x1, y1, x2, y2])
                 conf.append(score)
-                cls.append(0.0)  # nếu đơn lớp, gán 0; thay đổi theo use case của bạn
+                cls.append(cl)  # nếu đơn lớp, gán 0; thay đổi theo use case của bạn
             det_view = _BoxesLite(np.asarray(xyxy, np.float32),
                                   np.asarray(conf, np.float32),
                                   np.asarray(cls,  np.float32))

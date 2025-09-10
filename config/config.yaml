@@ -3,6 +3,7 @@
 # Database
 database:
     input: "data/raw"
+    processed: "data/processed"
     output: "data/embeddings/db.pkl"
 
 # Detector configuration: chọn mô hình phát hiện và đường dẫn file trọng số.

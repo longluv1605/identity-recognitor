@@ -14,7 +14,7 @@ class BaseDetector(ABC):
     """Abstract base class for face detectors."""
 
     @abstractmethod
-    def detect(self, frame: np.ndarray) -> List[Tuple[int, int, int, int]]:
+    def detect(self, frame: np.ndarray) -> List[Tuple[int, int, int, int, float, int]]:
         """
         Detect faces in a frame.
 
@@ -23,8 +23,8 @@ class BaseDetector(ABC):
 
         Returns:
             Danh sách các bounding box, mỗi box được biểu diễn bởi tuple
-            (x, y, w, h), trong đó (x, y) là tọa độ góc trên bên trái,
-            w và h là chiều rộng và chiều cao.
+            (x, y, w, h, conf, cls), trong đó (x, y) là tọa độ góc trên bên trái,
+            w và h là chiều rộng và chiều cao, conf là confidence của dự đoán, cls là class dự đoán.
         """
         raise NotImplementedError
     

@@ -97,7 +97,10 @@ class FaceRecognitionPipeline:
     def _create_detector(self, det_cfg):
         det_name = det_cfg.get("name", "yolov8")
         if det_name == "yolov8":
-            self.detector = YoloDetector(det_cfg.get("model_path", "yolov8n.pt"))
+            self.detector = YoloDetector(
+                det_cfg.get("model_path", "yolov8n.pt"),
+                det_cfg.get("device", "cpu")
+            )
         else:
             raise ValueError(f"Unsupported detector: {det_name}")
     

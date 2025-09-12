@@ -17,8 +17,8 @@ Hệ thống nhận diện khuôn mặt thời gian thực sử dụng Deep Lear
 ```plain
 Input Frame → Face Detection → Face Alignment → Embedding Extraction → Matching → Tracking   →  Output
      ↓              ↓               ↓                 ↓                  ↓              ↓         ↓
-  Webcam         YOLOv8 (Face)   MediaPipe       DeepFace/ArcFace    Database       ByteTrack/  Display
-                                                                     Matching       DeepSORT     + FPS
+  Webcam         YOLOv8 (Face)     ____          DeepFace/ArcFace     Database       ByteTrack/  Display
+                                                                      Matching       DeepSORT     + FPS
 ```
 
 ## Cấu trúc thư mục

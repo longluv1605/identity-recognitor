@@ -25,7 +25,7 @@ import argparse
 import cv2
 import numpy as np
 import yaml
-# from tqdm import tqdm
+from tqdm import tqdm
 
 from src.detectors import YoloDetector
 from src.aligners import SimpleAligner
@@ -65,7 +65,6 @@ def build_database(config_path: str) -> None:
 
     db = {}
     people = [d for d in os.listdir(db_cfg['input']) if os.path.isdir(os.path.join(db_cfg['input'], d))]
-    # people = tqdm(people, desc='Building database: ')
     for person in people:
         person_dir = os.path.join(db_cfg['input'], person)
         save_dir = os.path.join(db_cfg['processed'], person)
@@ -73,7 +72,8 @@ def build_database(config_path: str) -> None:
             os.makedirs(save_dir, exist_ok=True)
         
         embeddings = []
-        for img_name in os.listdir(person_dir):
+        loop = tqdm(os.listdir(person_dir), desc=f"Processing [{person}]")
+        for img_name in loop:
             img_path = os.path.join(person_dir, img_name)
             save_path = os.path.join(save_dir, img_name)
             

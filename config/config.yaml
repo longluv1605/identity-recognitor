@@ -10,6 +10,7 @@ database:
 detector:
     name: yolov8
     model_path: "models/detection/yolo/yolov8n-face.pt"
+    device: cuda
 
 # Aligner: dùng SimpleResize để chỉ resize và chuẩn hóa ảnh
 aligner:

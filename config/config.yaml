@@ -18,19 +18,28 @@ aligner:
 
 # Embedding: chọn phương pháp trích xuất đặc trưng.
 embedding:
-    method: deepface # simple, arcface, deepface
+    method: arcface # simple, arcface, deepface
     output_dim: 512 # 512 cho Facenet512/ArcFace, 128 cho Facenet/OpenFace
-    input_size: 32
-    model_path: "models/embedding/arcface/arcfaceresnet100-11-int8.onnx" # đường dẫn file .onnx khi dùng ArcFace
+    input_size: 112
+    model_path: "models/embedding/arcface/w600k_r50.onnx" # đường dẫn file .onnx khi dùng ArcFace
     model_name: "ArcFace" # "VGG-Face", "Facenet", "Facenet512", "OpenFace", "DeepFace", "DeepID", "ArcFace", "Dlib", "SFace", "GhostFaceNet", "Buffalo_L"
     enforce_detection: false
+    normalize: true
     device: cpu
+    # ArcFace ONNX specific
+    preprocess: insightface # insightface | minus_one_to_one
+    rgb: true
+    output_index: null
 
 # Matcher: cấu hình cách so khớp embedding với database.
 matcher:
     type: simple
-    threshold: 0.6 # Threshold cho cosine similarity với SimpleEmbedder
+    threshold: 0.5 # Threshold cho cosine similarity với SimpleEmbedder
     use_cosine: true # Cosine similarity cho SimpleEmbedder
+    aggregation: topk-mean # max | mean | median | topk-mean
+    topk: 3
+    second_best_margin: 0.06
+    normalize_query: true
 
 # Tracker: chỉ định thuật toán theo dõi và các tham số ByteTrack nếu dùng.
 tracker:

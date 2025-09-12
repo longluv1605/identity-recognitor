@@ -6,26 +6,29 @@ import os
 import uuid
 from .base import BaseEmbedder
 
+
+def _l2_normalize(vec: np.ndarray) -> np.ndarray:
+    """Row / vector wise L2 normalisation."""
+    n = np.linalg.norm(vec)
+    if n > 0:
+        return vec / n
+    return vec
+
 class DeepFaceEmbedder(BaseEmbedder):
-    
-    def __init__(self, 
+
+    def __init__(self,
                  model_name: str = "Facenet512",
-                 enforce_detection: bool = False):
-        """
-        DeepFace Embedder
-        
-        Args:
-            model_name: Tên model ('VGG-Face', 'Facenet', 'Facenet512', 
-                       'OpenFace', 'DeepFace', 'DeepID', 'ArcFace', 'Dlib', 'SFace')
-            enforce_detection: Có bắt buộc detect face không
-        """
+                 enforce_detection: bool = False,
+                 normalize: bool = True):
+        """DeepFace Embedder."""
         self.model_name = model_name
         self.enforce_detection = enforce_detection
-        
+        self.normalize = normalize
+
         # Xác định output dimension
         self.output_dims = {
             'VGG-Face': 2622,
-            'Facenet': 128, 
+            'Facenet': 128,
             'Facenet512': 512,
             'OpenFace': 128,
             'DeepFace': 4096,
@@ -34,9 +37,9 @@ class DeepFaceEmbedder(BaseEmbedder):
             'Dlib': 128,
             'SFace': 128
         }
-        
+
         self.output_dim = self.output_dims.get(model_name, 512)
-        print(f"Initialized DeepFace with {model_name} (dim={self.output_dim})")
+        print(f"Initialized DeepFace with {model_name} (dim={self.output_dim}) | normalize={self.normalize}")
         
     
     def embed(self, face: np.ndarray) -> np.ndarray:
@@ -65,21 +68,27 @@ class DeepFaceEmbedder(BaseEmbedder):
             embedding_objs = DeepFace.represent(
                 img_path=temp_path,
                 model_name=self.model_name,
-                enforce_detection=self.enforce_detection
+                enforce_detection=self.enforce_detection,
+                detector_backend='skip'  # we already provide aligned face
             )
             
             # DeepFace trả về list of dict
             if len(embedding_objs) > 0:
                 embedding = np.array(embedding_objs[0]["embedding"], dtype=np.float32)
             else:
-                # Trường hợp không detect được face
                 embedding = np.zeros(self.output_dim, dtype=np.float32)
-                
+
+            if self.normalize:
+                embedding = _l2_normalize(embedding)
+
             return embedding
                     
         except Exception as e:
             print(f"Error in DeepFace embedding: {e}")
-            return np.zeros(self.output_dim, dtype=np.float32)
+            out = np.zeros(self.output_dim, dtype=np.float32)
+            if self.normalize:
+                return out  # already zero
+            return out
             
         finally:
             # Cleanup temp file

@@ -81,7 +81,7 @@ class FaceRecognitionPipeline:
             return [(x, y, w, h, *recognize(x, y, w, h), tid) for x, y, w, h, tid in tracks]
 
         # không có tracker/hoặc tracker đơn giản → nhận dạng trước
-        results = [(x, y, w, h, *recognize(x, y, w, h), -1) for (x, y, w, h, _) in detections]
+        results = [(x, y, w, h, *recognize(x, y, w, h), -1) for (x, y, w, h, _, _) in detections]
 
         # gán ID nếu có assign_ids
         if getattr(self.tracker, "assign_ids", None):
@@ -124,7 +124,7 @@ class FaceRecognitionPipeline:
             )
         elif emb_method == "arcface":
             self.embedder = ArcFaceEmbedder(
-                model_path=emb_cfg.get("model_path"), device=emb_cfg.get("device", "cpu")                     
+                model_path=emb_cfg.get("model_path")
             )
         elif emb_method == "deepface":
             self.embedder = DeepFaceEmbedder(
@@ -142,7 +142,11 @@ class FaceRecognitionPipeline:
             self.matcher = SimpleMatcher(
                 embeddings=self.db.get_all() if self.db else {}, 
                 threshold=threshold,
-                use_cosine=use_cosine
+                use_cosine=use_cosine,
+                aggregation=match_cfg.get("aggregation", "topk-mean"),
+                topk=match_cfg.get("topk", 3),
+                second_best_margin=match_cfg.get("second_best_margin", 0.05),
+                normalize_query=match_cfg.get("normalize_query", True)
             )
         else:
             raise ValueError(f"Unsupported matcher: {matcher_type}")

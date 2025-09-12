@@ -58,8 +58,10 @@ def build_database(config_path: str) -> None:
         
     if emb_cfg['method'] == 'deepface':
         embedder = DeepFaceEmbedder(model_name=emb_cfg['model_name'])
+    elif emb_cfg['method'] == 'arcface':
+        embedder = ArcFaceEmbedder(model_path=emb_cfg['model_path'])
     else:
-        raise ValueError("Unsupported embedder...")
+        raise ValueError(f"Unsupported embedder [{emb_cfg['method']}]...")
 
     db = {}
     people = [d for d in os.listdir(db_cfg['input']) if os.path.isdir(os.path.join(db_cfg['input'], d))]

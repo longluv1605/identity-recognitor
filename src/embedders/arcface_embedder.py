@@ -1,83 +1,109 @@
-"""
-ArcFace embedding extractor.
-
-Lớp này bao bọc một mô hình ArcFace đã huấn luyện (định dạng ONNX) và
-trích xuất vector đặc trưng 512 chiều. Bạn cần cài đặt gói onnxruntime
-hoặc onnxruntime‑gpu và cung cấp đường dẫn tới file .onnx.
-"""
-
-from typing import Optional
-import numpy as np
+import os
 import cv2
-
-try:
-    import onnxruntime as ort
-except ImportError:
-    ort = None
+import numpy as np
+import onnxruntime as ort
+from typing import Optional, Tuple, List
 
 from .base import BaseEmbedder
 
-
 class ArcFaceEmbedder(BaseEmbedder):
     """
-    Embedder sử dụng mô hình ArcFace. Kế thừa SimpleEmbedder để giữ tham số
-    size và output_dim, nhưng override phương thức embed().
+    ArcFace Model for Face Recognition
 
-    Parameters
-    ----------
-    model_path : str
-        Đường dẫn tới file ArcFace ONNX (bắt buộc).
-    device : str, optional
-        Thiết bị thực thi cho ONNX Runtime ('cpu' hoặc 'cuda').
-        Mặc định là 'cpu'; để dùng GPU cần cài onnxruntime‑gpu.
+    This class implements a face encoder using the ArcFace architecture,
+    loading a pre-trained model from an ONNX file.
     """
 
-    def __init__(self, model_path: str, device: str = "cpu"):
-        # Gọi parent để đặt output_dim=512, input size=112
-        super().__init__(output_dim=512, size=112)
-        if ort is None:
-            raise ImportError(
-                "ArcFaceEmbedder requires the onnxruntime package. "
-                "Install it with 'pip install onnxruntime' or 'pip install onnxruntime-gpu'."
-            )
-        if not model_path:
-            raise ValueError("An ArcFace ONNX model path must be provided")
+    def __init__(self, model_path: str, input_size: Tuple[int, int] = (112, 112), normalized: bool = True) -> None:
+        """
+        Initializes the ArcFace face encoder model.
 
-        # Chọn provider tuỳ theo device
-        if device.lower() == "cuda":
-            providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
-        else:
-            providers = ["CPUExecutionProvider"]
+        Args:
+            model_path (str): Path to ONNX model file.
+            input_size (tuple(int)): 
 
-        # Khởi tạo session ONNX
+        Raises:
+            RuntimeError: If model initialization fails.
+        """
+        self.model_path = model_path
+        self.input_size = input_size
+        self.normalization_mean = 127.5
+        self.normalization_scale = 127.5
+        self.normalized = normalized
+
         try:
-            self.session = ort.InferenceSession(model_path, providers=providers)
+            self.session = ort.InferenceSession(
+                self.model_path,
+                providers=["CUDAExecutionProvider", "CPUExecutionProvider"]
+            )
+
+            input_config = self.session.get_inputs()[0]
+            self.input_name = input_config.name
+
+            input_shape = input_config.shape
+            model_input_size = tuple(input_shape[2:4][::-1])
+            if model_input_size != self.input_size:
+                print(
+                    f"Model input size {model_input_size} differs from configured size {self.input_size}"
+                )
+
+            self.output_names = [o.name for o in self.session.get_outputs()]
+            self.output_shape = self.session.get_outputs()[0].shape
+            self.embedding_size = self.output_shape[1]
+
+            assert len(self.output_names) == 1, "Expected only one output node."
+
         except Exception as e:
-            raise RuntimeError(f"Failed to load ArcFace model from '{model_path}': {e}")
+            raise RuntimeError(f"Failed to initialize model session for '{self.model_path}'") from e
 
-    def embed(self, face: np.ndarray) -> np.ndarray:
-        """Trả về vector 512 chiều đã chuẩn hoá cho ảnh khuôn mặt."""
-        if face.size == 0:
-            return np.zeros(self.output_dim, dtype=np.float32)
-        # Resize về 112x112
-        img = cv2.resize(face, (self.size, self.size))
-        # Chuyển BGR -> RGB
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        # Đổi sang float32 và scale về [0,1]
-        img = img.astype(np.float32) / 255.0
-        # Chuẩn hoá [-1,1]
-        img = (img - 0.5) / 0.5
-        # Chuyển shape (H,W,C) -> (C,H,W)
-        img = np.transpose(img, (2, 0, 1))
-        # Thêm dimension batch
-        img = np.expand_dims(img, axis=0)
+    def _preprocess(self, face: np.ndarray) -> np.ndarray:
+        """
+        Preprocess the face image: resize, normalize, and convert to the required format.
 
-        # Tên input lấy từ mô hình
-        ort_inputs = {self.session.get_inputs()[0].name: img}
-        embeddings = self.session.run(None, ort_inputs)[0]
-        vec = embeddings[0].astype(np.float32)
-        # Chuẩn hoá vector về độ dài 1
-        norm = np.linalg.norm(vec)
-        if norm > 0:
-            vec /= norm
-        return vec
+        Args:
+            face_image (np.ndarray): Input face image in BGR format.
+
+        Returns:
+            np.ndarray: Preprocessed image blob ready for inference.
+        """
+        resized_face = cv2.resize(face, self.input_size)
+
+        if isinstance(self.normalization_scale, (list, tuple)):
+            mean_array = np.array(self.normalization_mean, dtype=np.float32)
+            scale_array = np.array(self.normalization_scale, dtype=np.float32)
+            normalized_face = (face - mean_array) / scale_array
+
+            # Change to NCHW format (batch, channels, height, width)
+            transposed_face = np.transpose(normalized_face, (2, 0, 1))
+            face_blob = np.expand_dims(transposed_face, axis=0)
+        else:
+            # Single-value normalization using cv2.dnn
+            face_blob = cv2.dnn.blobFromImage(
+                resized_face,
+                scalefactor=1.0 / self.normalization_scale,
+                size=self.input_size,
+                mean=(self.normalization_mean,)*3,
+                swapRB=True
+            )
+        return face_blob
+
+    def embed(
+        self,
+        face: np.ndarray,
+    ) -> np.ndarray:
+
+        try:
+            face_blob = self._preprocess(face)
+            embedding = self.session.run(self.output_names, {self.input_name: face_blob})[0]
+
+            if self.normalized:
+                # L2 normalization of embedding
+                norm = np.linalg.norm(embedding, axis=1, keepdims=True)
+                normalized_embedding = embedding / norm
+                return normalized_embedding.flatten()
+
+            return embedding.flatten()
+
+        except Exception as e:
+            print(f"Error extracting face embedding: {e}")
+            raise

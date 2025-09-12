@@ -5,3 +5,4 @@
 **.onnx**
 test.py
 data/*
+notebooks/*

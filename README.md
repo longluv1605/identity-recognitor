@@ -73,9 +73,8 @@ conda activate realtime-face-recognition
 
 ### 3. Download models
 
-```bash
-# Hoặc tải thủ công tại: https://github.com/akanametov/yolov8-face
-```
+Tải [tại đây](https://github.com/yakhyo/face-reidentification/releases/download/v0.0.1/w600k_r50.onnx).
+Sau đó, đặt model đã tải vào thư mục `models/embedding/arcface`.
 
 ## Chuẩn bị dữ liệu
 

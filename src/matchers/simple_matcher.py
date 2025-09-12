@@ -1,4 +1,4 @@
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 import numpy as np
 from .base import BaseMatcher
 
@@ -21,74 +21,106 @@ def cosine_similarity(vec1: np.ndarray, vec2: np.ndarray) -> float:
     return dot / (norm1 * norm2)
 
 class SimpleMatcher(BaseMatcher):
-    """
-    Matcher hỗ trợ nhiều embeddings cho mỗi người.
-    embeddings có thể là:
-    - Dict[str, np.ndarray]: 1 embedding per person (legacy)
-    - Dict[str, np.ndarray]: nhiều embeddings per person (shape: [n_embeddings, embedding_dim])
-    """
+    """Matcher với chiến lược aggregation & margin open-set rejection."""
 
-    def __init__(self, embeddings: Dict[str, np.ndarray], threshold: float = 1.2, use_cosine: bool = False):
+    def __init__(self,
+                 embeddings: Dict[str, np.ndarray],
+                 threshold: float = 0.6,
+                 use_cosine: bool = True,
+                 aggregation: str = "topk-mean",
+                 topk: int = 3,
+                 second_best_margin: float = 0.05,
+                 normalize_query: bool = True):
         super().__init__(threshold=threshold)
-        # Xử lý cả single embedding và multiple embeddings
-        self.embeddings = {}
+        self.embeddings: Dict[str, np.ndarray] = {}
         for k, v in embeddings.items():
             v = np.asarray(v, dtype=np.float32)
             if v.ndim == 1:
-                # Single embedding - giữ nguyên
-                self.embeddings[k] = v.reshape(1, -1)  # [1, embedding_dim]
-            elif v.ndim == 2:
-                # Multiple embeddings - đã đúng format
-                self.embeddings[k] = v  # [n_embeddings, embedding_dim]
-            else:
+                v = v.reshape(1, -1)
+            elif v.ndim != 2:
                 raise ValueError(f"Invalid embedding shape for {k}: {v.shape}")
+            # assume already normalised but ensure
+            norms = np.linalg.norm(v, axis=1, keepdims=True)
+            v = v / np.clip(norms, 1e-12, None)
+            self.embeddings[k] = v
         self.use_cosine = use_cosine
+        self.aggregation = aggregation
+        self.topk = max(1, topk)
+        self.second_best_margin = second_best_margin
+        self.normalize_query = normalize_query
+
+    # ---------------- Aggregation helpers -----------------
+    def _aggregate(self, scores: List[float]) -> float:
+        if not scores:
+            return 0.0 if self.use_cosine else float('inf')
+        arr = np.asarray(scores, dtype=np.float32)
+        if self.use_cosine:
+            if self.aggregation == "mean":
+                return float(arr.mean())
+            if self.aggregation == "median":
+                return float(np.median(arr))
+            if self.aggregation.startswith("topk"):
+                k = min(self.topk, arr.size)
+                return float(np.sort(arr)[-k:].mean())
+            return float(arr.max())  # default max
+        # distance mode
+        if self.aggregation == "mean":
+            return float(arr.mean())
+        if self.aggregation == "median":
+            return float(np.median(arr))
+        if self.aggregation.startswith("topk"):
+            k = min(self.topk, arr.size)
+            return float(np.sort(arr)[:k].mean())
+        return float(arr.min())
 
     def match(self, query: np.ndarray) -> Tuple[str, float]:
-        best_label = "unknown"
-        
+        if query.size == 0:
+            return "unknown", 0.0 if self.use_cosine else float('inf')
+        q = query.astype(np.float32)
+        if self.use_cosine and self.normalize_query:
+            n = np.linalg.norm(q)
+            if n > 0:
+                q = q / n
+
+        scores_per_identity = []  # (label, agg_score)
+        for label, emb_array in self.embeddings.items():
+            scores = []
+            for emb in emb_array:
+                if self.use_cosine:
+                    s = cosine_similarity(q, emb)
+                else:
+                    s = l2_distance(q, emb)
+                scores.append(s)
+            agg = self._aggregate(scores)
+            scores_per_identity.append((label, agg))
+
+        if not scores_per_identity:
+            return "unknown", 0.0 if self.use_cosine else float('inf')
+
+        # sort: cosine desc, distance asc
+        reverse = self.use_cosine
+        scores_per_identity.sort(key=lambda x: x[1], reverse=reverse)
+        best_label, best_score = scores_per_identity[0]
+        second_score = scores_per_identity[1][1] if len(scores_per_identity) > 1 else (0.0 if self.use_cosine else float('inf'))
+
         if self.use_cosine:
-            # Sử dụng cosine similarity (score cao = giống)
-            best_score = 0.0
-            for label, emb_array in self.embeddings.items():
-                # Tính similarity với tất cả embeddings của người này
-                scores = []
-                for emb in emb_array:
-                    score = cosine_similarity(query, emb)
-                    scores.append(score)
-                # Lấy score cao nhất (best match)
-                max_score = max(scores)
-                if max_score > best_score:
-                    best_label = label
-                    best_score = max_score
-            # So sánh với ngưỡng
-            if best_score >= self.threshold:
-                return best_label, best_score
-            return "unknown", best_score
+            if best_score < self.threshold:
+                return "unknown", best_score
+            if (best_score - second_score) < self.second_best_margin:
+                return "unknown", best_score
+            return best_label, best_score
         else:
-            # Sử dụng L2 distance (score nhỏ = giống)
-            best_distance = float('inf')
-            for label, emb_array in self.embeddings.items():
-                # Tính distance với tất cả embeddings của người này
-                distances = []
-                for emb in emb_array:
-                    distance = l2_distance(query, emb)
-                    distances.append(distance)
-                # Lấy distance nhỏ nhất (best match)
-                min_distance = min(distances)
-                if min_distance < best_distance:
-                    best_label = label
-                    best_distance = min_distance
-            # So sánh với ngưỡng (distance nhỏ hơn threshold = trùng khớp)
-            if best_distance <= self.threshold:
-                return best_label, best_distance
-            return "unknown", best_distance
+            if best_score > self.threshold:
+                return "unknown", best_score
+            if (second_score - best_score) < self.second_best_margin:
+                return "unknown", best_score
+            return best_label, best_score
 
     def update_database(self, new_embeddings: Dict[str, np.ndarray]) -> None:
-        """Bổ sung hoặc ghi đè embeddings trong cơ sở dữ liệu."""
         for label, emb in new_embeddings.items():
             emb = np.asarray(emb, dtype=np.float32)
             if emb.ndim == 1:
-                self.embeddings[label] = emb.reshape(1, -1)
-            else:
-                self.embeddings[label] = emb
+                emb = emb.reshape(1, -1)
+            norms = np.linalg.norm(emb, axis=1, keepdims=True)
+            emb = emb / np.clip(norms, 1e-12, None)
+            self.embeddings[label] = emb

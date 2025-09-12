@@ -73,8 +73,16 @@ conda activate realtime-face-recognition
 
 ### 3. Download models
 
-Tải [tại đây](https://github.com/yakhyo/face-reidentification/releases/download/v0.0.1/w600k_r50.onnx).
+- Tải `detector` [tại đây](https://github.com/akanametov/yolov8-face).
+Sau đó, đặt model vào thư mục `models/detection/yolo`.
+- Tải `embedder` [tại đây](https://github.com/yakhyo/face-reidentification/releases/download/v0.0.1/w600k_r50.onnx).
 Sau đó, đặt model đã tải vào thư mục `models/embedding/arcface`.
+
+Nếu muốn dùng `detector` ở dạng ONNX, chạy lệnh:
+
+```bash
+   python scripts/export_onnx.py --weights models/detection/yolo/<model_name.pt>
+```
 
 ## Chuẩn bị dữ liệu
 

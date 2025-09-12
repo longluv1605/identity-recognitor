@@ -9,9 +9,13 @@ database:
 # Detector configuration: chọn mô hình phát hiện và đường dẫn file trọng số.
 detector:
     name: yolov8
-    model_path: "models/detection/yolo/yolov8n-face.pt"
-    device: cuda
-
+    model_path: "models/detection/yolo/yolov8n-face.onnx"
+    device: cuda # cuda | cpu | dml
+    onnx: true
+    providers: ["CUDAExecutionProvider", "CPUExecutionProvider"] # (list) if use onnx: "CUDAExecutionProvider", "CPUExecutionProvider"
+    input_size: 640
+    conf_thres: 0.25
+    iou_thres: 0.45
 # Aligner: dùng SimpleResize để chỉ resize và chuẩn hóa ảnh
 aligner:
     type: simple
@@ -27,10 +31,6 @@ embedding:
     enforce_detection: false
     normalize: true
     device: cpu
-    # ArcFace ONNX specific
-    preprocess: insightface # insightface | minus_one_to_one
-    rgb: true
-    output_index: null
 
 # Matcher: cấu hình cách so khớp embedding với database.
 matcher:

@@ -9,7 +9,7 @@ from typing import List, Tuple
 import yaml
 import numpy as np
 
-from src.detectors import YoloDetector
+from src.detectors import YoloDetector, YoloOnnxDetector
 from src.aligners import SimpleAligner
 from src.embedders import SimpleEmbedder, ArcFaceEmbedder, DeepFaceEmbedder
 from src.matchers import SimpleMatcher
@@ -97,10 +97,20 @@ class FaceRecognitionPipeline:
     def _create_detector(self, det_cfg):
         det_name = det_cfg.get("name", "yolov8")
         if det_name == "yolov8":
-            self.detector = YoloDetector(
-                det_cfg.get("model_path", "yolov8n.pt"),
-                det_cfg.get("device", "cpu")
-            )
+            if det_cfg.get("onnx"):
+                self.detector = YoloOnnxDetector(
+                    model_path=det_cfg["model_path"],
+                    device=det_cfg.get("device", "cpu"),
+                    input_size=int(det_cfg.get("input_size", 640)),
+                    conf_thres=float(det_cfg.get("conf_thres", 0.25)),
+                    iou_thres=float(det_cfg.get("iou_thres", 0.45)),
+                    providers=det_cfg.get("providers", None),
+                )
+            else:
+                self.detector = YoloDetector(
+                    det_cfg.get("model_path", "yolov8n.pt"),
+                    det_cfg.get("device", "cpu")
+                )
         else:
             raise ValueError(f"Unsupported detector: {det_name}")
     

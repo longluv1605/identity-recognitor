@@ -69,6 +69,8 @@ conda env create -f environment.yml
 
 # Kích hoạt environment
 conda activate realtime-face-recognition
+
+pip install -r requirements.txt
 ```
 
 ### 3. Download models
